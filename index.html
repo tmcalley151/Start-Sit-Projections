@@ -152,6 +152,25 @@
   .bulk-row .rm{background:none;border:none;color:var(--muted);font-size:16px;cursor:pointer;padding:0;}
   .addrow-btn{width:100%;padding:9px;border:1.5px dashed var(--border);border-radius:7px;background:none;color:var(--muted);font-size:13px;font-weight:700;cursor:pointer;margin-bottom:12px;}
   .bulk-head{display:grid;grid-template-columns:1fr 74px 78px 22px;gap:6px;font-size:11px;color:var(--muted);font-weight:700;margin-bottom:6px;padding:0 2px;}
+
+  .scope-switch{display:flex;gap:8px;margin-bottom:14px;}
+  .scope-btn{flex:1;padding:9px;text-align:center;font-size:13px;font-weight:700;border-radius:7px;border:1.5px solid var(--border);color:var(--muted);cursor:pointer;background:#fff;}
+  .scope-btn.on{border-color:var(--field);color:var(--field);background:#EFF3F1;}
+
+  .stand-table{width:100%;border-collapse:collapse;}
+  .stand-table th{
+    text-align:right;font-size:11px;color:var(--muted);font-weight:700;padding:0 0 8px;cursor:pointer;user-select:none;white-space:nowrap;
+  }
+  .stand-table th:first-child, .stand-table th:nth-child(2){text-align:left;cursor:default;}
+  .stand-table th.active{color:var(--field);}
+  .stand-table th .arrow{font-size:10px;margin-left:2px;}
+  .stand-table td{padding:10px 0;border-top:1px solid var(--border);font-size:14px;text-align:right;}
+  .stand-table td:first-child{text-align:left;width:24px;font-weight:800;color:var(--muted);}
+  .stand-table td:nth-child(2){text-align:left;font-weight:700;}
+  .stand-table tr.me td{color:var(--field);}
+  .stand-table tr.me{background:#FBF7EC;}
+  .stand-table tr.me td:first-child, .stand-table tr.me td:nth-child(2){box-shadow:inset 3px 0 0 var(--gold);}
+  .pct-pill{display:inline-block;padding:2px 8px;border-radius:10px;background:#F0EEE6;font-weight:700;font-size:12.5px;}
 </style>
 </head>
 <body>
@@ -252,7 +271,7 @@ function App(){
   const [group, setGroup] = useState(null);
   const [screen, setScreen] = useState('welcome');
   const [tab, setTab] = useState('picks');
-  const [week, setWeek] = useState(1);
+  const [week, setWeek] = useState(3);
   const [nameInput, setNameInput] = useState('');
   const [codeInput, setCodeInput] = useState('');
   const [groupNameInput, setGroupNameInput] = useState('');
@@ -261,6 +280,9 @@ function App(){
 
   const emptyPoolRow = () => ({player:'', projected:''});
   const [poolRows, setPoolRows] = useState(Array.from({length:10}, emptyPoolRow));
+  const [standScope, setStandScope] = useState('season'); // 'season' | 'week'
+  const [standSort, setStandSort] = useState('correct'); // 'correct' | 'pct'
+  const [standDir, setStandDir] = useState('desc'); // 'desc' | 'asc'
 
   useEffect(()=>{
     (async ()=>{
@@ -430,19 +452,45 @@ function App(){
   const myEntries = weekData.entries[session.name] || [];
   const entryFor = (poolId) => myEntries.find(e => e.poolId === poolId);
 
-  // standings calc
-  const memberStats = group.members.map(m => {
-    let correct=0, total=0;
-    Object.keys(group.weeks).forEach(w=>{
-      const wd = readWeek(group, w);
-      const picks = wd.entries[m] || [];
-      picks.forEach(p=>{
-        const r = isCorrect(p);
-        if(r !== null){ total++; if(r) correct++; }
-      });
+  // standings calc — one pass per member, both season totals and this week's totals
+  const statsFor = (scope) => {
+    return group.members.map(m => {
+      let correct=0, total=0;
+      if(scope === 'season'){
+        Object.keys(group.weeks).forEach(w=>{
+          const wd = readWeek(group, w);
+          (wd.entries[m] || []).forEach(p=>{
+            const r = isCorrect(p);
+            if(r !== null){ total++; if(r) correct++; }
+          });
+        });
+      } else {
+        (weekData.entries[m] || []).forEach(p=>{
+          const r = isCorrect(p);
+          if(r !== null){ total++; if(r) correct++; }
+        });
+      }
+      const pct = total > 0 ? Math.round((correct/total)*1000)/10 : null;
+      return {name:m, correct, total, pct};
     });
-    return {name:m, correct, total};
-  }).sort((a,b)=> b.correct - a.correct);
+  };
+
+  const sortStats = (stats) => {
+    const dir = standDir === 'desc' ? -1 : 1;
+    return [...stats].sort((a,b) => {
+      const av = standSort === 'pct' ? (a.pct ?? -1) : a.correct;
+      const bv = standSort === 'pct' ? (b.pct ?? -1) : b.correct;
+      if(av === bv) return a.name.localeCompare(b.name);
+      return (av - bv) * dir;
+    });
+  };
+
+  const toggleSort = (col) => {
+    if(standSort === col){ setStandDir(d => d==='desc'?'asc':'desc'); }
+    else { setStandSort(col); setStandDir('desc'); }
+  };
+
+  const memberStats = sortStats(statsFor(standScope));
 
   const weekWinner = (() => {
     let best=null, bestScore=-1;
@@ -593,18 +641,38 @@ function App(){
           React.createElement('div', {style:{fontSize:20,fontWeight:800,marginTop:4}}, weekWinner.name),
           React.createElement('div', {style:{color:'var(--muted)',fontSize:13,marginTop:2}}, weekWinner.score + ' correct picks')
         ),
+        React.createElement('div', {className:'scope-switch'},
+          React.createElement('div', {className:'scope-btn'+(standScope==='season'?' on':''), onClick:()=>setStandScope('season')}, 'Whole season'),
+          React.createElement('div', {className:'scope-btn'+(standScope==='week'?' on':''), onClick:()=>setStandScope('week')}, 'Week ' + week + ' only')
+        ),
         React.createElement('div', {className:'card'},
-          React.createElement('h2', null, 'Season standings'),
-          memberStats.map((m,i) => React.createElement('div', {
-            className:'lb-row'+(m.name===session.name?' me':''), key:m.name
-          },
-            React.createElement('div', {className:'lb-rank'}, i+1),
-            React.createElement('div', {style:{flex:1}},
-              React.createElement('div', {className:'lb-name'}, m.name),
-              React.createElement('div', {className:'lb-sub'}, m.total, ' picks scored')
-            ),
-            React.createElement('div', {className:'lb-score'}, m.correct)
-          ))
+          React.createElement('h2', null, standScope==='season' ? 'Season standings' : 'Week ' + week + ' standings'),
+          memberStats.every(m=>m.total===0)
+            ? React.createElement('div', {className:'empty'}, 'No scored picks yet for this view.')
+            : React.createElement('table', {className:'stand-table'},
+                React.createElement('thead', null,
+                  React.createElement('tr', null,
+                    React.createElement('th', null),
+                    React.createElement('th', null, 'Player'),
+                    React.createElement('th', {
+                      className: standSort==='correct' ? 'active' : '',
+                      onClick:()=>toggleSort('correct')
+                    }, 'Correct', standSort==='correct' && React.createElement('span',{className:'arrow'}, standDir==='desc'?'▼':'▲')),
+                    React.createElement('th', {
+                      className: standSort==='pct' ? 'active' : '',
+                      onClick:()=>toggleSort('pct')
+                    }, 'Pct', standSort==='pct' && React.createElement('span',{className:'arrow'}, standDir==='desc'?'▼':'▲'))
+                  )
+                ),
+                React.createElement('tbody', null,
+                  memberStats.map((m,i) => React.createElement('tr', {className: m.name===session.name?'me':'', key:m.name},
+                    React.createElement('td', null, i+1),
+                    React.createElement('td', null, m.name),
+                    React.createElement('td', null, m.correct, React.createElement('span',{style:{color:'var(--muted)',fontWeight:400}}, ' / '+m.total)),
+                    React.createElement('td', null, m.pct===null ? '—' : React.createElement('span',{className:'pct-pill'}, m.pct+'%'))
+                  ))
+                )
+              )
         ),
         React.createElement('p', {className:'muted-small'}, 'Share code ', React.createElement('b',null,group.code), ' with friends to have them join.')
       )
