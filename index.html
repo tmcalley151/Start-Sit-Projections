@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Start/Sit</title>
+<style>
+  :root{
+    --field:#16302B;
+    --field-line:#274F44;
+    --chalk:#F5F1E8;
+    --gold:#C99A3B;
+    --ink:#1C1C1A;
+    --muted:#6B7A73;
+    --start:#3C7A4E;
+    --start-bg:#E4EFE6;
+    --sit:#B4432F;
+    --sit-bg:#F5E4E0;
+    --card:#FFFFFF;
+    --border:#E0DDD3;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    background:var(--chalk);
+    color:var(--ink);
+  }
+  .app{max-width:520px;margin:0 auto;min-height:100vh;background:var(--chalk);}
+  .header{
+    background:var(--field);
+    color:var(--chalk);
+    padding:28px 20px 22px;
+    position:relative;
+    overflow:hidden;
+  }
+  .header::before{
+    content:"";
+    position:absolute;
+    inset:0;
+    background-image:repeating-linear-gradient(90deg, transparent, transparent 38px, var(--field-line) 38px, var(--field-line) 40px);
+    opacity:.5;
+  }
+  .header-inner{position:relative;}
+  .brand{
+    font-size:26px;
+    font-weight:800;
+    letter-spacing:-0.5px;
+    margin:0;
+  }
+  .brand span{color:var(--gold);}
+  .tagline{margin:4px 0 0;font-size:13px;color:#B9C9C2;}
+  .groupbar{
+    display:flex;justify-content:space-between;align-items:center;
+    margin-top:16px;font-size:13px;color:#CFE0D9;
+    position:relative;
+  }
+  .groupbar b{color:var(--chalk);font-weight:700;}
+  .leavebtn{background:none;border:1px solid #3E5E54;color:#CFE0D9;padding:4px 10px;border-radius:6px;font-size:12px;cursor:pointer;}
+
+  .screen{padding:20px;}
+  .card{
+    background:var(--card);
+    border:1px solid var(--border);
+    border-radius:10px;
+    padding:18px;
+    margin-bottom:14px;
+  }
+  h2{font-size:16px;margin:0 0 10px;font-weight:700;}
+  p.sub{color:var(--muted);font-size:13px;margin:0 0 14px;line-height:1.5;}
+  label{display:block;font-size:12px;color:var(--muted);margin-bottom:5px;font-weight:600;}
+  input[type=text], input[type=number]{
+    width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:7px;
+    font-size:15px;margin-bottom:12px;background:#fff;color:var(--ink);
+  }
+  input:focus{outline:2px solid var(--gold);outline-offset:1px;}
+  .btn{
+    display:inline-block;width:100%;padding:12px;border-radius:7px;border:none;
+    font-size:15px;font-weight:700;cursor:pointer;text-align:center;
+  }
+  .btn-primary{background:var(--field);color:var(--chalk);}
+  .btn-primary:active{opacity:.85;}
+  .btn-outline{background:#fff;border:1px solid var(--field);color:var(--field);}
+  .row{display:flex;gap:10px;}
+  .row > *{flex:1;}
+  .divider{display:flex;align-items:center;gap:10px;color:var(--muted);font-size:12px;margin:16px 0;}
+  .divider::before,.divider::after{content:"";flex:1;height:1px;background:var(--border);}
+
+  .tabs{display:flex;background:#fff;border-bottom:1px solid var(--border);position:sticky;top:0;z-index:5;}
+  .tab{flex:1;text-align:center;padding:13px 4px;font-size:13px;font-weight:700;color:var(--muted);cursor:pointer;border-bottom:3px solid transparent;}
+  .tab.active{color:var(--field);border-bottom-color:var(--gold);}
+
+  .weekbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
+  .weekbar .wk{font-size:18px;font-weight:800;}
+  .weekbar select{padding:6px 10px;border-radius:6px;border:1px solid var(--border);font-size:14px;background:#fff;}
+
+  .pickcard{
+    background:#fff;border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:10px;
+  }
+  .pickcard .top{display:flex;justify-content:space-between;align-items:flex-start;}
+  .player{font-weight:700;font-size:15px;}
+  .proj{color:var(--muted);font-size:12px;margin-top:2px;}
+  .choice-row{display:flex;gap:8px;margin-top:10px;}
+  .choice{
+    flex:1;text-align:center;padding:9px;border-radius:7px;font-size:13px;font-weight:700;
+    border:1.5px solid var(--border);cursor:pointer;color:var(--muted);
+  }
+  .choice.start.sel{background:var(--start-bg);border-color:var(--start);color:var(--start);}
+  .choice.sit.sel{background:var(--sit-bg);border-color:var(--sit);color:var(--sit);}
+  .del{background:none;border:none;color:var(--muted);font-size:12px;cursor:pointer;text-decoration:underline;}
+
+  .result-badge{font-size:11px;font-weight:800;padding:3px 8px;border-radius:5px;}
+  .result-badge.correct{background:var(--start-bg);color:var(--start);}
+  .result-badge.wrong{background:var(--sit-bg);color:var(--sit);}
+  .result-badge.pending{background:#F0EEE6;color:var(--muted);}
+
+  .empty{text-align:center;padding:40px 20px;color:var(--muted);}
+  .empty i{font-size:32px;display:block;margin-bottom:10px;}
+
+  .lb-row{display:flex;align-items:center;padding:12px 0;border-bottom:1px solid var(--border);}
+  .lb-row:last-child{border-bottom:none;}
+  .lb-rank{width:26px;font-weight:800;color:var(--muted);font-size:14px;}
+  .lb-name{flex:1;font-weight:700;font-size:14px;}
+  .lb-sub{color:var(--muted);font-size:12px;margin-top:1px;}
+  .lb-score{font-weight:800;font-size:16px;color:var(--field);}
+  .lb-row.me .lb-name{color:var(--field);}
+  .lb-row.me{background:#FBF7EC;margin:0 -18px;padding:12px 18px;}
+
+  .actualinput{display:flex;gap:8px;align-items:center;margin-top:10px;}
+  .actualinput input{margin-bottom:0;}
+  .actualinput .btn{width:auto;padding:9px 14px;}
+
+  .toast{
+    position:fixed;bottom:20px;left:50%;transform:translateX(-50%);
+    background:var(--ink);color:#fff;padding:10px 18px;border-radius:8px;font-size:13px;
+    opacity:0;transition:opacity .3s;pointer-events:none;z-index:50;
+  }
+  .toast.show{opacity:1;}
+  .code-display{font-size:22px;font-weight:800;letter-spacing:3px;text-align:center;padding:14px;background:#F0EEE6;border-radius:8px;margin:12px 0;color:var(--field);}
+  .muted-small{font-size:12px;color:var(--muted);text-align:center;margin-top:6px;}
+
+  .mode-switch{display:flex;gap:8px;margin-bottom:14px;}
+  .mode-btn{flex:1;padding:9px;text-align:center;font-size:13px;font-weight:700;border-radius:7px;border:1.5px solid var(--border);color:var(--muted);cursor:pointer;background:#fff;}
+  .mode-btn.on{border-color:var(--field);color:var(--field);background:#EFF3F1;}
+
+  .bulk-row{display:grid;grid-template-columns:1fr 74px 78px 22px;gap:6px;align-items:center;margin-bottom:8px;}
+  .bulk-row input[type=text], .bulk-row input[type=number]{margin-bottom:0;padding:8px 9px;font-size:14px;}
+  .bulk-row .mini-choice{display:flex;border-radius:7px;overflow:hidden;border:1.5px solid var(--border);}
+  .bulk-row .mini-choice div{flex:1;text-align:center;font-size:11px;font-weight:700;padding:8px 2px;color:var(--muted);cursor:pointer;}
+  .bulk-row .mini-choice .start.sel{background:var(--start-bg);color:var(--start);}
+  .bulk-row .mini-choice .sit.sel{background:var(--sit-bg);color:var(--sit);}
+  .bulk-row .rm{background:none;border:none;color:var(--muted);font-size:16px;cursor:pointer;padding:0;}
+  .addrow-btn{width:100%;padding:9px;border:1.5px dashed var(--border);border-radius:7px;background:none;color:var(--muted);font-size:13px;font-weight:700;cursor:pointer;margin-bottom:12px;}
+  .bulk-head{display:grid;grid-template-columns:1fr 74px 78px 22px;gap:6px;font-size:11px;color:var(--muted);font-weight:700;margin-bottom:6px;padding:0 2px;}
+</style>
+</head>
+<body>
+<div id="root" class="app"></div>
+<div id="toast" class="toast"></div>
+
+<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore-compat.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
+
+<script>
+  // ====== FIREBASE SETUP — REPLACE WITH YOUR OWN PROJECT'S CONFIG ======
+  // 1. Go to https://console.firebase.google.com, create a free project.
+  // 2. Build > Firestore Database > Create database > Start in test mode.
+  // 3. Project settings (gear icon) > General > "Your apps" > Web app (</>) > copy the config object below.
+  const firebaseConfig = {
+    apiKey: "AIzaSyCicbpuXEuPWHnhhcWVaOdppVKVtJDiQA8",
+    authDomain: "start-sit-projections.firebaseapp.com",
+    projectId: "start-sit-projections",
+    storageBucket: "start-sit-projections.firebasestorage.app",
+    messagingSenderId: "195711326773",
+    appId: "1:195711326773:web:1f758229cfbfdf5c3def7c"
+  };
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.firestore();
+</script>
+
+<script type="text/babel" data-presets="react">
+const { useState, useEffect } = React;
+
+function showToast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 1800);
+}
+
+function genCode(){
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let out = '';
+  for(let i=0;i<5;i++) out += chars[Math.floor(Math.random()*chars.length)];
+  return out;
+}
+function genId(){ return Date.now()+'-'+Math.random().toString(36).slice(2,7); }
+
+async function loadGroup(code){
+  try{
+    const doc = await db.collection('groups').doc(code).get();
+    return doc.exists ? doc.data() : null;
+  }catch(e){ console.error('loadGroup failed', e); return null; }
+}
+async function saveGroup(code, data){
+  try{
+    await db.collection('groups').doc(code).set(data);
+  }catch(e){ console.error('save failed', e); }
+}
+function loadSession(){
+  try{
+    const raw = localStorage.getItem('startsit_session');
+    return raw ? JSON.parse(raw) : null;
+  }catch(e){ return null; }
+}
+function saveSession(data){
+  try{ localStorage.setItem('startsit_session', JSON.stringify(data)); }catch(e){}
+}
+
+function isCorrect(pick){
+  if(pick.actual === null || pick.actual === undefined) return null;
+  if(pick.choice === 'start') return pick.actual > pick.projected;
+  return pick.actual < pick.projected;
+}
+
+// Reads a week's data with a consistent shape, tolerating older data saved
+// before the owner-managed pool existed (back then weeks[w] was {user: picks[]}).
+function readWeek(g, week){
+  const w = g.weeks[week];
+  if(!w) return {pool:[], entries:{}};
+  if(w.entries) return {pool: w.pool || [], entries: w.entries || {}};
+  return {pool:[], entries: w}; // legacy shape
+}
+function ensureWeek(g, week){
+  const existing = g.weeks[week];
+  if(!existing){
+    g.weeks[week] = {pool:[], entries:{}};
+  } else if(!existing.entries){
+    g.weeks[week] = {pool:[], entries: existing}; // migrate legacy shape in place
+  } else if(!existing.pool){
+    existing.pool = [];
+  }
+  return g.weeks[week];
+}
+
+function App(){
+  const [loading, setLoading] = useState(true);
+  const [session, setSession] = useState(null); // {name, code}
+  const [group, setGroup] = useState(null);
+  const [screen, setScreen] = useState('welcome');
+  const [tab, setTab] = useState('picks');
+  const [week, setWeek] = useState(1);
+  const [nameInput, setNameInput] = useState('');
+  const [codeInput, setCodeInput] = useState('');
+  const [groupNameInput, setGroupNameInput] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [actualDrafts, setActualDrafts] = useState({});
+
+  const emptyPoolRow = () => ({player:'', projected:''});
+  const [poolRows, setPoolRows] = useState(Array.from({length:10}, emptyPoolRow));
+
+  useEffect(()=>{
+    (async ()=>{
+      const s = loadSession();
+      if(s && s.code){
+        const g = await loadGroup(s.code);
+        if(g){
+          setSession(s);
+          setGroup(g);
+          setScreen('app');
+        }
+      }
+      setLoading(false);
+    })();
+  },[]);
+
+  // Live sync: whenever anyone in the league saves a change, everyone's screen updates automatically.
+  useEffect(()=>{
+    if(!session || !session.code) return;
+    const unsubscribe = db.collection('groups').doc(session.code)
+      .onSnapshot(doc => { if(doc.exists) setGroup(doc.data()); });
+    return () => unsubscribe();
+  }, [session]);
+
+  const handleCreate = async () => {
+    if(!nameInput.trim() || !groupNameInput.trim()){ showToast('Enter your name and a league name'); return; }
+    setBusy(true);
+    const code = genCode();
+    const newGroup = {
+      name: groupNameInput.trim(),
+      code,
+      owner: nameInput.trim(),
+      members: [nameInput.trim()],
+      weeks: {}
+    };
+    await saveGroup(code, newGroup);
+    const s = { name: nameInput.trim(), code };
+    await saveSession(s);
+    setSession(s); setGroup(newGroup); setScreen('app');
+    setBusy(false);
+  };
+
+  const handleJoin = async () => {
+    if(!nameInput.trim() || !codeInput.trim()){ showToast('Enter your name and a league code'); return; }
+    setBusy(true);
+    const code = codeInput.trim().toUpperCase();
+    const g = await loadGroup(code);
+    if(!g){ showToast("Can't find that league code"); setBusy(false); return; }
+    if(!g.owner) g.owner = g.members[0]; // migrate older leagues created before ownership existed
+    if(!g.members.includes(nameInput.trim())){
+      g.members.push(nameInput.trim());
+      await saveGroup(code, g);
+    }
+    const s = { name: nameInput.trim(), code };
+    await saveSession(s);
+    setSession(s); setGroup(g); setScreen('app');
+    setBusy(false);
+  };
+
+  const handleLeave = async () => {
+    await saveSession({});
+    setSession(null); setGroup(null); setScreen('welcome');
+    setNameInput(''); setCodeInput(''); setGroupNameInput('');
+  };
+
+  // --- Owner: manage the week's player pool ---
+  const updatePoolRow = (idx, field, value) => {
+    setPoolRows(prev => prev.map((r,i) => i===idx ? {...r, [field]: value} : r));
+  };
+  const addPoolRow = () => setPoolRows(prev => [...prev, emptyPoolRow()]);
+  const removePoolRowDraft = (idx) => setPoolRows(prev => prev.filter((_,i)=>i!==idx));
+
+  const submitPool = async () => {
+    const filled = poolRows.filter(r => r.player.trim() !== '' || r.projected !== '');
+    if(filled.length === 0){ showToast('Fill in at least one player'); return; }
+    for(const r of filled){
+      if(!r.player.trim()){ showToast('Every filled row needs a player name'); return; }
+      const p = parseFloat(r.projected);
+      if(isNaN(p) || p < 0){ showToast('Check the projected points on "'+r.player+'"'); return; }
+    }
+    const g = await loadGroup(session.code);
+    const wd = ensureWeek(g, week);
+    filled.forEach(r => {
+      wd.pool.push({ id: genId(), player: r.player.trim(), projected: parseFloat(r.projected) });
+    });
+    await saveGroup(session.code, g);
+    setGroup(g);
+    setPoolRows(Array.from({length:10}, emptyPoolRow));
+    showToast(filled.length + ' players added to the pool');
+  };
+
+  const removeFromPool = async (poolId) => {
+    const g = await loadGroup(session.code);
+    const wd = ensureWeek(g, week);
+    wd.pool = wd.pool.filter(p => p.id !== poolId);
+    await saveGroup(session.code, g);
+    setGroup(g);
+  };
+
+  // --- Everyone: choose start/sit for a pooled player ---
+  const choosePick = async (poolPlayer, choiceVal) => {
+    const g = await loadGroup(session.code);
+    const wd = ensureWeek(g, week);
+    if(!wd.entries[session.name]) wd.entries[session.name] = [];
+    let entry = wd.entries[session.name].find(e => e.poolId === poolPlayer.id);
+    if(entry){
+      entry.choice = choiceVal;
+    } else {
+      wd.entries[session.name].push({
+        id: genId(),
+        poolId: poolPlayer.id,
+        player: poolPlayer.player,
+        projected: poolPlayer.projected,
+        choice: choiceVal,
+        actual: null
+      });
+    }
+    await saveGroup(session.code, g);
+    setGroup(g);
+  };
+
+  const setActual = async (user, id, value) => {
+    const val = parseFloat(value);
+    if(isNaN(val)){ showToast('Enter a number'); return; }
+    const g = await loadGroup(session.code);
+    const wd = ensureWeek(g, week);
+    const pick = (wd.entries[user] || []).find(p => p.id === id);
+    if(pick) pick.actual = val;
+    await saveGroup(session.code, g);
+    setGroup(g);
+    setActualDrafts(prev => { const c = {...prev}; delete c[id]; return c; });
+    showToast('Score recorded');
+  };
+
+  if(loading) return React.createElement('div', {style:{padding:40,textAlign:'center',color:'var(--muted)'}}, 'Loading...');
+
+  if(screen === 'welcome'){
+    return React.createElement('div', null,
+      React.createElement('div', {className:'header'},
+        React.createElement('div', {className:'header-inner'},
+          React.createElement('h1', {className:'brand'}, 'Start', React.createElement('span',null,'/'), 'Sit'),
+          React.createElement('p', {className:'tagline'}, 'Predict against projections. Track the season.')
+        )
+      ),
+      React.createElement('div', {className:'screen'},
+        React.createElement('div', {className:'card'},
+          React.createElement('h2', null, 'Your name'),
+          React.createElement('input', {type:'text', placeholder:'e.g. Jordan', value:nameInput, onChange:e=>setNameInput(e.target.value)}),
+
+          React.createElement('h2', null, 'Create a new league'),
+          React.createElement('p', {className:'sub'}, "You'll be the league owner, which means you set each week's player pool and projections."),
+          React.createElement('input', {type:'text', placeholder:'League name, e.g. The Waiver Wire', value:groupNameInput, onChange:e=>setGroupNameInput(e.target.value)}),
+          React.createElement('button', {className:'btn btn-primary', onClick:handleCreate, disabled:busy}, 'Create league'),
+
+          React.createElement('div', {className:'divider'}, 'or'),
+
+          React.createElement('h2', null, 'Join with a code'),
+          React.createElement('input', {type:'text', placeholder:'5-letter code', value:codeInput, onChange:e=>setCodeInput(e.target.value.toUpperCase())}),
+          React.createElement('button', {className:'btn btn-outline', onClick:handleJoin, disabled:busy}, 'Join league')
+        )
+      )
+    );
+  }
+
+  const isOwner = group.owner ? session.name === group.owner : group.members[0] === session.name;
+  const weekData = readWeek(group, week);
+  const myEntries = weekData.entries[session.name] || [];
+  const entryFor = (poolId) => myEntries.find(e => e.poolId === poolId);
+
+  // standings calc
+  const memberStats = group.members.map(m => {
+    let correct=0, total=0;
+    Object.keys(group.weeks).forEach(w=>{
+      const wd = readWeek(group, w);
+      const picks = wd.entries[m] || [];
+      picks.forEach(p=>{
+        const r = isCorrect(p);
+        if(r !== null){ total++; if(r) correct++; }
+      });
+    });
+    return {name:m, correct, total};
+  }).sort((a,b)=> b.correct - a.correct);
+
+  const weekWinner = (() => {
+    let best=null, bestScore=-1;
+    group.members.forEach(m=>{
+      const picks = weekData.entries[m] || [];
+      let wc = 0;
+      picks.forEach(p=>{ if(isCorrect(p)===true) wc++; });
+      if(wc > bestScore){ bestScore = wc; best = m; }
+    });
+    return bestScore > 0 ? {name:best, score:bestScore} : null;
+  })();
+
+  return React.createElement('div', null,
+    React.createElement('div', {className:'header'},
+      React.createElement('div', {className:'header-inner'},
+        React.createElement('h1', {className:'brand'}, 'Start', React.createElement('span',null,'/'), 'Sit'),
+        React.createElement('div', {className:'groupbar'},
+          React.createElement('span', null, React.createElement('b', null, group.name), ' · code ', group.code, isOwner ? ' · you\u2019re the owner' : ''),
+          React.createElement('button', {className:'leavebtn', onClick:handleLeave}, 'Switch')
+        )
+      )
+    ),
+    React.createElement('div', {className:'tabs'},
+      ['picks','score','standings'].map(t =>
+        React.createElement('div', {
+          key:t,
+          className:'tab'+(tab===t?' active':''),
+          onClick:()=>setTab(t)
+        }, t==='picks'?'My picks':t==='score'?'Enter scores':'Standings')
+      )
+    ),
+    React.createElement('div', {className:'screen'},
+
+      React.createElement('div', {className:'weekbar'},
+        React.createElement('span', {className:'wk'}, 'Week ', week),
+        React.createElement('select', {value:week, onChange:e=>setWeek(parseInt(e.target.value))},
+          Array.from({length:18},(_,i)=>i+1).map(w=>React.createElement('option',{key:w,value:w},'Week '+w))
+        )
+      ),
+
+      tab === 'picks' && React.createElement(React.Fragment, null,
+
+        isOwner && React.createElement('div', {className:'card'},
+          React.createElement('h2', null, 'Set week ' + week + "'s players"),
+          React.createElement('p', {className:'sub'}, 'Only you can add or edit these. Everyone else picks start or sit from this list.'),
+          React.createElement('div', {className:'bulk-head'},
+            React.createElement('span', null, 'Player'),
+            React.createElement('span', null, 'Proj.'),
+            React.createElement('span', null),
+            React.createElement('span', null)
+          ),
+          poolRows.map((r, idx) => React.createElement('div', {className:'bulk-row', key:idx, style:{gridTemplateColumns:'1fr 90px 22px'}},
+            React.createElement('input', {
+              type:'text', placeholder:'Player name', value:r.player,
+              onChange:e=>updatePoolRow(idx,'player',e.target.value)
+            }),
+            React.createElement('input', {
+              type:'number', placeholder:'Pts (half-PPR)', value:r.projected,
+              onChange:e=>updatePoolRow(idx,'projected',e.target.value)
+            }),
+            React.createElement('button', {className:'rm', onClick:()=>removePoolRowDraft(idx), 'aria-label':'Remove row'}, '×')
+          )),
+          React.createElement('button', {className:'addrow-btn', onClick:addPoolRow}, '+ Add another row'),
+          React.createElement('button', {className:'btn btn-primary', onClick:submitPool}, 'Save to this week\u2019s pool'),
+
+          weekData.pool.length > 0 && React.createElement('div', {style:{marginTop:16}},
+            React.createElement('label', null, 'Currently in the pool'),
+            weekData.pool.map(p => React.createElement('div', {
+              key:p.id, style:{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'8px 0',borderBottom:'1px solid var(--border)',fontSize:13}
+            },
+              React.createElement('span', null, p.player, ' — ', p.projected, ' pts'),
+              React.createElement('button', {className:'del', onClick:()=>removeFromPool(p.id)}, 'Remove')
+            ))
+          )
+        ),
+
+        React.createElement('div', {className:'card'},
+          React.createElement('h2', null, 'Make your picks — Week ' + week),
+          weekData.pool.length === 0
+            ? React.createElement('div', {className:'empty'}, isOwner
+                ? 'Add players above to build this week\u2019s pool.'
+                : 'The league owner hasn\u2019t set this week\u2019s players yet.')
+            : weekData.pool.map(pp => {
+                const mine = entryFor(pp.id);
+                const r = mine ? isCorrect(mine) : null;
+                return React.createElement('div', {className:'pickcard', key:pp.id},
+                  React.createElement('div', {className:'top'},
+                    React.createElement('div', null,
+                      React.createElement('div', {className:'player'}, pp.player),
+                      React.createElement('div', {className:'proj'}, 'Projected ', pp.projected, ' pts (half-PPR)')
+                    ),
+                    mine && React.createElement('span', {className:'result-badge '+(r===null?'pending':r?'correct':'wrong')},
+                      r===null ? 'Pending' : r ? 'Correct' : 'Missed')
+                  ),
+                  React.createElement('div', {className:'choice-row'},
+                    React.createElement('div', {
+                      className:'choice start'+(mine && mine.choice==='start'?' sel':''),
+                      onClick:()=>choosePick(pp,'start')
+                    }, 'Start — will beat it'),
+                    React.createElement('div', {
+                      className:'choice sit'+(mine && mine.choice==='sit'?' sel':''),
+                      onClick:()=>choosePick(pp,'sit')
+                    }, 'Sit — will miss it')
+                  )
+                );
+              })
+        )
+      ),
+
+      tab === 'score' && React.createElement(React.Fragment, null,
+        React.createElement('p', {className:'sub'}, 'Anyone in the league can enter the actual points once games are final.'),
+        group.members.map(m => {
+          const picks = weekData.entries[m] || [];
+          if(picks.length === 0) return null;
+          return React.createElement('div', {className:'card', key:m},
+            React.createElement('h2', null, m),
+            picks.map(p => {
+              const r = isCorrect(p);
+              return React.createElement('div', {key:p.id, style:{marginBottom:10, paddingBottom:10, borderBottom:'1px solid var(--border)'}},
+                React.createElement('div', {className:'top'},
+                  React.createElement('div', null,
+                    React.createElement('div', {className:'player'}, p.player),
+                    React.createElement('div', {className:'proj'}, 'Projected ', p.projected, ' · picked ', p.choice, p.actual!=null ? (' · actual '+p.actual) : '')
+                  ),
+                  React.createElement('span', {className:'result-badge '+(r===null?'pending':r?'correct':'wrong')},
+                    r===null ? 'Pending' : r ? 'Correct' : 'Missed')
+                ),
+                React.createElement('div', {className:'actualinput'},
+                  React.createElement('input', {
+                    type:'number',
+                    placeholder:'Actual points',
+                    value: actualDrafts[p.id] !== undefined ? actualDrafts[p.id] : (p.actual != null ? p.actual : ''),
+                    onChange: e => setActualDrafts(prev=>({...prev, [p.id]: e.target.value}))
+                  }),
+                  React.createElement('button', {className:'btn btn-outline', onClick:()=>setActual(m, p.id, actualDrafts[p.id])}, 'Save')
+                )
+              );
+            })
+          );
+        }),
+        Object.values(weekData.entries).every(arr => !arr || arr.length===0) &&
+          React.createElement('div', {className:'empty'}, 'No picks submitted for week ' + week + ' yet.')
+      ),
+
+      tab === 'standings' && React.createElement(React.Fragment, null,
+        weekWinner && React.createElement('div', {className:'card', style:{textAlign:'center'}},
+          React.createElement('div', {style:{fontSize:12,color:'var(--muted)',fontWeight:700}}, 'WEEK '+week+' LEADER'),
+          React.createElement('div', {style:{fontSize:20,fontWeight:800,marginTop:4}}, weekWinner.name),
+          React.createElement('div', {style:{color:'var(--muted)',fontSize:13,marginTop:2}}, weekWinner.score + ' correct picks')
+        ),
+        React.createElement('div', {className:'card'},
+          React.createElement('h2', null, 'Season standings'),
+          memberStats.map((m,i) => React.createElement('div', {
+            className:'lb-row'+(m.name===session.name?' me':''), key:m.name
+          },
+            React.createElement('div', {className:'lb-rank'}, i+1),
+            React.createElement('div', {style:{flex:1}},
+              React.createElement('div', {className:'lb-name'}, m.name),
+              React.createElement('div', {className:'lb-sub'}, m.total, ' picks scored')
+            ),
+            React.createElement('div', {className:'lb-score'}, m.correct)
+          ))
+        ),
+        React.createElement('p', {className:'muted-small'}, 'Share code ', React.createElement('b',null,group.code), ' with friends to have them join.')
+      )
+    )
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(App));
+</script>
+</body>
+</html>
